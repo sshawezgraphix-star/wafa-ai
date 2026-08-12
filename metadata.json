@@ -1,0 +1,6 @@
+{
+  "name": "Firdous AI Assistant",
+  "description": "Real-time voice AI assistant Firdous created by Shawez Hacker with audio visualizers, tool integration, and natural conversation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

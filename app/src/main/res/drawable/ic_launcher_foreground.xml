@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54">
+        <!-- Outer Glowing Wave Ring -->
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#00F0FF"
+            android:strokeWidth="2.5"
+            android:pathData="M54,22 A32,32 0 1,1 53.9,22 Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#7000FF"
+            android:strokeWidth="1.5"
+            android:pathData="M54,16 A38,38 0 1,1 53.9,16 Z" />
+        <!-- Soundwave vertical bars -->
+        <path
+            android:fillColor="#00F0FF"
+            android:pathData="M38,46 h4 v16 h-4 z M46,38 h4 v32 h-4 z M54,32 h4 v44 h-4 z M62,38 h4 v32 h-4 z M70,46 h4 v16 h-4 z" />
+    </group>
+</vector>
