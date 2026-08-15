@@ -26,16 +26,14 @@ jobs:
     - name: Setup Android SDK Platform Tools
       uses: android-actions/setup-android@v3
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-
-    - name: Fix gradlew permissions and line endings
+    - name: Download and Setup Gradle 8.11
       run: |
-        sed -i -e 's/\r$//' gradlew
-        chmod +x gradlew
+        wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+        unzip -q gradle-8.11.1-bin.zip
 
-    - name: Compile & Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace --no-daemon
+    - name: Compile Maya AI APK (assembleDebug)
+      run: |
+        ./gradle-8.11.1/bin/gradle assembleDebug --stacktrace --no-daemon
 
     - name: Upload Maya AI APK as Artifact
       uses: actions/upload-artifact@v4
