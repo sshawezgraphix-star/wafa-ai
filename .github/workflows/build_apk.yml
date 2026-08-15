@@ -26,8 +26,13 @@ jobs:
     - name: Setup Android SDK Platform Tools
       uses: android-actions/setup-android@v3
 
-    - name: Grant Execute Permission for Gradle Wrapper
-      run: chmod +x gradlew
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Fix gradlew permissions and line endings
+      run: |
+        sed -i -e 's/\r$//' gradlew
+        chmod +x gradlew
 
     - name: Compile & Build Debug APK
       run: ./gradlew assembleDebug --stacktrace --no-daemon
@@ -43,8 +48,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
       with:
-        tag_name: v1.0.0-${{ github.run_number }}
-        name: "Maya AI Mark-XXXIX Mobile Release v1.0.0 (Build ${{ github.run_number }})"
+        tag_name: v1.0.0-build-${{ github.run_number }}
+        name: "Maya AI Mark-XXXIX Mobile Release (Build ${{ github.run_number }})"
         body: |
           ### 🚀 Maya AI Mark-XXXIX - Official Android Release
           
