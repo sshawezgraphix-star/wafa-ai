@@ -26,6 +26,11 @@ jobs:
     - name: Setup Android SDK Platform Tools
       uses: android-actions/setup-android@v3
 
+    - name: Setup Standard Debug Keystore
+      run: |
+        mkdir -p ~/.android
+        keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+
     - name: Download and Setup Gradle 9.3.1
       run: |
         wget -q https://services.gradle.org/distributions/gradle-9.3.1-bin.zip
