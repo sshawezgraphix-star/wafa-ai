@@ -26,14 +26,14 @@ jobs:
     - name: Setup Android SDK Platform Tools
       uses: android-actions/setup-android@v3
 
-    - name: Download and Setup Gradle 8.11
+    - name: Download and Setup Gradle 9.3.1
       run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
-        unzip -q gradle-8.11.1-bin.zip
+        wget -q https://services.gradle.org/distributions/gradle-9.3.1-bin.zip
+        unzip -q gradle-9.3.1-bin.zip
 
     - name: Compile Maya AI APK (assembleDebug)
       run: |
-        ./gradle-8.11.1/bin/gradle assembleDebug --stacktrace --no-daemon
+        ./gradle-9.3.1/bin/gradle assembleDebug --stacktrace --no-daemon
 
     - name: Upload Maya AI APK as Artifact
       uses: actions/upload-artifact@v4
