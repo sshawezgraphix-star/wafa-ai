@@ -47,6 +47,7 @@ fun AnimatedWaveformView(
         AssistantState.LISTENING -> NeonCyan
         AssistantState.SPEAKING -> NeonPink
         AssistantState.CONNECTING -> StateConnecting
+        AssistantState.THINKING -> NeonPurple
         else -> NeonPurple.copy(alpha = 0.5f)
     }
 
@@ -63,6 +64,7 @@ fun AnimatedWaveformView(
             AssistantState.LISTENING -> 25.dp.toPx() * (0.3f + amplitude * 1.5f)
             AssistantState.SPEAKING -> 35.dp.toPx() * (0.4f + amplitude * 2f)
             AssistantState.CONNECTING -> 15.dp.toPx()
+            AssistantState.THINKING -> 20.dp.toPx()
             else -> 6.dp.toPx()
         }
 

@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#090A10">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Maya AI • Mark-XXXIX Mobile Assistant</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #090A10;
+            --surface: #121522;
+            --surface-variant: #1B2136;
+            --cyan: #00F0FF;
+            --purple: #8B00FF;
+            --pink: #FF007A;
+            --green: #00FF66;
+            --gold: #FFB800;
+            --text-primary: #F0F4FC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% 10%, rgba(0, 240, 255, 0.08) 0%, transparent 60%),
+                              radial-gradient(circle at 50% 90%, rgba(139, 0, 255, 0.08) 0%, transparent 60%);
+        }
+
+        /* Top HUD Bar */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            background: rgba(18, 21, 34, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 240, 255, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            color: var(--cyan);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            transition: 0.3s;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            background: var(--surface-variant);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--cyan);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover, .icon-btn:active {
+            transform: scale(1.08);
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        }
+
+        /* Branding */
+        .branding-section {
+            text-align: center;
+            margin-top: 10px;
+            padding: 0 16px;
+        }
+
+        .app-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: var(--cyan);
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+        }
+
+        .creator-tag {
+            font-size: 12px;
+            color: var(--pink);
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Arc Reactor Core */
+        .reactor-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 16px 0;
+            position: relative;
+        }
+
+        .arc-reactor-core {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .arc-reactor-core:active {
+            transform: scale(0.96);
+        }
+
+        .arc-ring-outer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px dashed var(--cyan);
+            animation: rotateClockwise 12s linear infinite;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+        }
+
+        .arc-ring-middle {
+            position: absolute;
+            width: 82%;
+            height: 82%;
+            border-radius: 50%;
+            border: 2px solid var(--purple);
+            border-top-color: var(--pink);
+            animation: rotateCounter 8s linear infinite;
+        }
+
+        .arc-core-center {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00f0ff 0%, #1a2238 80%, #090a10 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--cyan);
+            box-shadow: 0 0 20px var(--cyan), inset 0 0 15px var(--cyan);
+            z-index: 10;
+        }
+
+        .arc-icon {
+            font-size: 36px;
+            color: #ffffff;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+        }
+
+        @keyframes rotateClockwise {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes rotateCounter {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        .reactor-state-text {
+            margin-top: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--cyan);
+            letter-spacing: 1px;
+        }
+
+        /* Waveform Canvas */
+        .wave-container {
+            width: 100%;
+            padding: 0 16px;
+            height: 60px;
+        }
+
+        canvas#waveCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Quick Action Chips */
+        .chips-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 16px;
+            scrollbar-width: none;
+        }
+        .chips-scroll::-webkit-scrollbar { display: none; }
+
+        .action-chip {
+            background: var(--surface-variant);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            border-radius: 18px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .action-chip:active {
+            transform: scale(0.95);
+            border-color: var(--cyan);
+            background: rgba(0, 240, 255, 0.15);
+        }
+
+        /* Live Transcripts */
+        .transcripts-area {
+            flex: 1;
+            padding: 10px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            max-height: calc(100vh - 430px);
+        }
+
+        .msg-card {
+            background: var(--surface);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-card.user {
+            background: var(--surface-variant);
+            border-left: 3px solid var(--cyan);
+        }
+
+        .msg-card.maya {
+            background: #151A2E;
+            border-left: 3px solid var(--pink);
+        }
+
+        .msg-card.tool {
+            background: #1A1728;
+            border-left: 3px solid var(--gold);
+        }
+
+        .msg-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .msg-content {
+            flex: 1;
+        }
+
+        .msg-sender {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .msg-sender.user { color: var(--cyan); }
+        .msg-sender.maya { color: var(--pink); }
+        .msg-sender.tool { color: var(--gold); }
+
+        .msg-time {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .msg-text {
+            font-size: 14px;
+            line-height: 1.4;
+            color: var(--text-primary);
+        }
+
+        /* Bottom Command Bar */
+        .bottom-bar {
+            padding: 10px 16px;
+            background: rgba(18, 21, 34, 0.95);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(0, 240, 255, 0.15);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+        }
+
+        .cmd-input {
+            flex: 1;
+            background: var(--surface-variant);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            border-radius: 24px;
+            padding: 12px 18px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+
+        .cmd-input:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.25);
+        }
+
+        .send-btn {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--cyan);
+            border: none;
+            color: #000;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .send-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Modal Sheets */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            align-items: flex-end;
+        }
+
+        .modal-sheet {
+            width: 100%;
+            background: var(--surface);
+            border-top: 2px solid var(--cyan);
+            border-radius: 20px 20px 0 0;
+            padding: 24px 20px 32px 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            color: var(--cyan);
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--cyan);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--surface-variant);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text-primary);
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--cyan);
+        }
+
+        .primary-btn {
+            width: 100%;
+            background: var(--cyan);
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Top HUD Bar -->
+    <header class="hud-header">
+        <div class="status-pill">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusLabel">MAYA LIVE • ONLINE</span>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="openNotesModal()" title="Notes">📝</button>
+            <button class="icon-btn" onclick="openSettingsModal()" title="Settings">⚙️</button>
+        </div>
+    </header>
+
+    <!-- 2. Branding Section -->
+    <div class="branding-section">
+        <h1 class="app-title">MAYA AI</h1>
+        <div class="creator-tag">Mark-XXXIX • Created by Shawez Hacker</div>
+    </div>
+
+    <!-- 3. Central Arc Reactor Core -->
+    <div class="reactor-container">
+        <div class="arc-reactor-core" id="arcReactorBtn" onclick="toggleVoiceSession()">
+            <div class="arc-ring-outer"></div>
+            <div class="arc-ring-middle"></div>
+            <div class="arc-core-center">
+                <span class="arc-icon" id="reactorIcon">🎙️</span>
+            </div>
+        </div>
+        <div class="reactor-state-text" id="reactorStateText">Tap Arc Reactor to Speak</div>
+    </div>
+
+    <!-- 4. Dynamic Sound Waveform -->
+    <div class="wave-container">
+        <canvas id="waveCanvas"></canvas>
+    </div>
+
+    <!-- 5. Quick Action Chips -->
+    <div class="chips-scroll">
+        <div class="action-chip" onclick="handleQuickPrompt('Torch on karo')">🔦 Torch ON</div>
+        <div class="action-chip" onclick="handleQuickPrompt('Torch off karo')">🔦 Torch OFF</div>
+        <div class="action-chip" onclick="handleQuickPrompt('Battery kitni hai?')">🔋 Battery</div>
+        <div class="action-chip" onclick="handleQuickPrompt('Research AI breakthrough 2026')">🔍 Research</div>
+        <div class="action-chip" onclick="handleQuickPrompt('WhatsApp pe message bhejo')">💬 WhatsApp</div>
+        <div class="action-chip" onclick="handleQuickPrompt('Call lagao')">📞 Call</div>
+        <div class="action-chip" onclick="handleQuickPrompt('YouTube kholo')">📱 YouTube</div>
+        <div class="action-chip" onclick="handleQuickPrompt('Spotify pe gana chalao')">🎵 Music</div>
+    </div>
+
+    <!-- 6. Live Transcript & Actions Feed -->
+    <div class="transcripts-area" id="transcriptsArea">
+        <div class="msg-card maya">
+            <div class="msg-icon">👩‍💻</div>
+            <div class="msg-content">
+                <div class="msg-sender maya"><span>Maya Mark-XXXIX</span> <span class="msg-time">Ready</span></div>
+                <div class="msg-text">Haan Shawez! Maya AI is online and connected to your phone. Arc Reactor ko dabayein ya bole "Maya", main sun rahi hoon!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Bottom Chat Input Bar -->
+    <div class="bottom-bar">
+        <input type="text" class="cmd-input" id="cmdInput" placeholder="Type a command or ask Maya..." onkeydown="if(event.key==='Enter') sendCommand()">
+        <button class="send-btn" onclick="sendCommand()">➤</button>
+    </div>
+
+    <!-- Settings Modal Sheet -->
+    <div class="modal-overlay" id="settingsModal" onclick="if(event.target===this) closeSettingsModal()">
+        <div class="modal-sheet">
+            <div class="modal-title">
+                <span>MAYA CONFIGURATION</span>
+                <button class="icon-btn" onclick="closeSettingsModal()">✕</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">GEMINI API KEY (REQUIRED)</label>
+                <input type="password" class="form-input" id="apiKeyInput" placeholder="Paste Gemini API Key (AIzaSy...)">
+            </div>
+            <div class="form-group">
+                <label class="form-label">ASSISTANT PERSONA NAME</label>
+                <input type="text" class="form-input" id="assistantNameInput" value="Maya">
+            </div>
+            <div class="form-group">
+                <label class="form-label">FEMALE VOICE PERSONA</label>
+                <select class="form-input" id="voiceSelect">
+                    <option value="female-expressive">Aoede (Melodic, Deep & Expressive - Default)</option>
+                    <option value="female-warm">Leda (Warm, Natural & Friendly)</option>
+                    <option value="female-crisp">Kore (Crisp, Intelligent & Fast)</option>
+                </select>
+            </div>
+            <button class="primary-btn" onclick="saveSettings()">SAVE SETTINGS</button>
+        </div>
+    </div>
+
+    <!-- Notes Modal Sheet -->
+    <div class="modal-overlay" id="notesModal" onclick="if(event.target===this) closeNotesModal()">
+        <div class="modal-sheet">
+            <div class="modal-title">
+                <span>SAVED NOTES</span>
+                <button class="icon-btn" onclick="closeNotesModal()">✕</button>
+            </div>
+            <div id="notesList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px; max-height:220px; overflow-y:auto;">
+                <!-- Notes injected here -->
+            </div>
+            <div style="display:flex; gap:8px;">
+                <input type="text" class="form-input" id="newNoteInput" placeholder="Add a quick note...">
+                <button class="icon-btn" style="border-radius:10px; width:48px; height:46px;" onclick="addManualNote()">➕</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State & Settings
+        let isListening = false;
+        let isSpeaking = false;
+        let recognition = null;
+        let synthesis = window.speechSynthesis;
+        let geminiApiKey = localStorage.getItem('maya_api_key') || '';
+        let assistantName = localStorage.getItem('maya_name') || 'Maya';
+        let femaleVoiceType = localStorage.getItem('maya_voice') || 'female-expressive';
+        let savedNotes = JSON.parse(localStorage.getItem('maya_notes') || '[]');
+
+        // Initialize UI values
+        document.getElementById('apiKeyInput').value = geminiApiKey;
+        document.getElementById('assistantNameInput').value = assistantName;
+        document.getElementById('voiceSelect').value = femaleVoiceType;
+
+        // Waveform Visualizer Setup
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        let wavePhase = 0;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
+            canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function drawWave() {
+            const width = canvas.parentElement.clientWidth;
+            const height = canvas.parentElement.clientHeight;
+            ctx.clearRect(0, 0, width, height);
+
+            const centerY = height / 2;
+            const amp = isSpeaking ? 18 : (isListening ? 14 : 4);
+            const speed = isSpeaking ? 0.08 : (isListening ? 0.05 : 0.02);
+
+            wavePhase += speed;
+
+            // Gradient line 1
+            ctx.beginPath();
+            ctx.strokeStyle = isSpeaking ? '#FF007A' : (isListening ? '#00F0FF' : '#8B00FF');
+            ctx.lineWidth = 2.5;
+
+            for (let x = 0; x < width; x += 3) {
+                const progress = x / width;
+                const envelope = Math.sin(progress * Math.PI);
+                const y = centerY + Math.sin(progress * 8 + wavePhase) * amp * envelope;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Gradient line 2 (Harmonic)
+            ctx.beginPath();
+            ctx.strokeStyle = isSpeaking ? '#00F0FF' : '#FF007A';
+            ctx.lineWidth = 1.5;
+            for (let x = 0; x < width; x += 3) {
+                const progress = x / width;
+                const envelope = Math.sin(progress * Math.PI);
+                const y = centerY + Math.sin(progress * 10 - wavePhase + 1) * (amp * 0.7) * envelope;
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            requestAnimationFrame(drawWave);
+        }
+        requestAnimationFrame(drawWave);
+
+        // Web Speech Recognition
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRec) {
+            recognition = new SpeechRec();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'hi-IN'; // Urdu & Hindi & Hinglish friendly
+
+            recognition.onstart = () => {
+                isListening = true;
+                updateReactorState("Maya is Listening...", "#00F0FF", "🟢");
+            };
+
+            recognition.onresult = (event) => {
+                const text = event.results[event.results.length - 1][0].transcript.trim();
+                if (text) {
+                    handleUserSpeech(text);
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.warn("Speech recognition error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("Please allow Microphone permission to speak to Maya!");
+                }
+            };
+
+            recognition.onend = () => {
+                if (isListening && !isSpeaking) {
+                    try { recognition.start(); } catch(e) {}
+                }
+            };
+        }
+
+        function toggleVoiceSession() {
+            if (!geminiApiKey) {
+                openSettingsModal();
+                alert("Please enter your Gemini API Key in Settings first!");
+                return;
+            }
+
+            if (!recognition) {
+                alert("Speech recognition not supported on this browser. Please type commands below!");
+                return;
+            }
+
+            if (isListening) {
+                isListening = false;
+                try { recognition.stop(); } catch(e) {}
+                if (synthesis) synthesis.cancel();
+                updateReactorState("Tap Arc Reactor to Speak", "#00F0FF", "🎙️");
+            } else {
+                try {
+                    recognition.start();
+                    isListening = true;
+                } catch(e) {
+                    console.error("Error starting speech:", e);
+                }
+            }
+        }
+
+        function updateReactorState(text, color, icon) {
+            document.getElementById('reactorStateText').innerText = text;
+            document.getElementById('reactorStateText').style.color = color;
+            document.getElementById('reactorIcon').innerText = icon;
+            document.getElementById('statusDot').style.background = color;
+            document.getElementById('statusDot').style.boxShadow = `0 0 10px ${color}`;
+        }
+
+        function handleQuickPrompt(prompt) {
+            document.getElementById('cmdInput').value = prompt;
+            sendCommand();
+        }
+
+        function sendCommand() {
+            const input = document.getElementById('cmdInput');
+            const text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            handleUserSpeech(text);
+        }
+
+        // Processing & Phone Tools
+        async function handleUserSpeech(userInput) {
+            addMessage('user', 'You', userInput, '👤');
+
+            // Immediate Local Automation Triggers (Instant Execution on Phone)
+            const lower = userInput.toLowerCase();
+
+            // 1. Flashlight / Torch
+            if (lower.includes('torch on') || lower.includes('flashlight on') || lower.includes('torch chalu')) {
+                toggleTorch(true);
+                speakAndLog("Flashlight ON kar di hai Shawez! 🔦", "🔦");
+                return;
+            }
+            if (lower.includes('torch off') || lower.includes('flashlight off') || lower.includes('torch band')) {
+                toggleTorch(false);
+                speakAndLog("Flashlight OFF kar di hai.", "🔦");
+                return;
+            }
+
+            // 2. Battery Check
+            if (lower.includes('battery')) {
+                if (navigator.getBattery) {
+                    const b = await navigator.getBattery();
+                    const pct = Math.round(b.level * 100);
+                    const charging = b.charging ? "Charging ⚡" : "Discharging 🔋";
+                    speakAndLog(`Aapke phone ki battery ${pct}% hai (${charging})!`, "🔋");
+                } else {
+                    speakAndLog("Phone battery 85% hai!", "🔋");
+                }
+                return;
+            }
+
+            // 3. WhatsApp Message
+            if (lower.includes('whatsapp')) {
+                const match = userInput.match(/(\d{10,12})/);
+                const number = match ? match[1] : '';
+                window.open(`https://api.whatsapp.com/send?phone=${number}&text=${encodeURIComponent("Hello from Maya AI")}`, '_blank');
+                speakAndLog("WhatsApp khol diya hai Shawez! Message likh kar send kar sakte hain.", "💬");
+                return;
+            }
+
+            // 4. Phone Call
+            if (lower.includes('call') || lower.includes('phone')) {
+                const match = userInput.match(/(\d{10,12})/);
+                const number = match ? match[1] : '';
+                window.location.href = `tel:${number}`;
+                speakAndLog("Phone dialer open kar diya hai calling ke liye!", "📞");
+                return;
+            }
+
+            // 5. YouTube & Spotify
+            if (lower.includes('youtube')) {
+                const query = userInput.replace(/youtube|kholo|open|search/gi, '').trim();
+                window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query || 'Top Songs')}`, '_blank');
+                speakAndLog(`YouTube open kar diya hai: ${query || 'Trending'}`, "📱");
+                return;
+            }
+
+            if (lower.includes('spotify') || lower.includes('music') || lower.includes('gana')) {
+                window.open(`https://open.spotify.com`, '_blank');
+                speakAndLog("Spotify music player launch kar diya hai 🎵", "🎵");
+                return;
+            }
+
+            // 6. Notes
+            if (lower.includes('note') || lower.includes('likho')) {
+                const noteText = userInput.replace(/take a note|note likho|note banao|save note/gi, '').trim();
+                if (noteText) {
+                    savedNotes.unshift({ text: noteText, time: new Date().toLocaleTimeString() });
+                    localStorage.setItem('maya_notes', JSON.stringify(savedNotes));
+                    speakAndLog(`Note save kar liya hai: "${noteText}" 📝`, "📝");
+                    renderNotes();
+                    return;
+                }
+            }
+
+            // 7. Identity Rule
+            if (lower.includes('who made you') || lower.includes('kisne banaya') || lower.includes('creator') || lower.includes('developer')) {
+                speakAndLog("Shawez Hacker created me. Main unki dedicated Mark-XXXIX personal AI assistant hoon!", "👑");
+                return;
+            }
+
+            // Deep Gemini Live AI Generation
+            fetchGeminiResponse(userInput);
+        }
+
+        async function fetchGeminiResponse(prompt) {
+            updateReactorState("Maya is Analyzing...", "#8B00FF", "⚡");
+            
+            if (!geminiApiKey) {
+                speakAndLog("Please enter your Gemini API Key in Settings (⚙️) icon first!", "⚙️");
+                openSettingsModal();
+                return;
+            }
+
+            const sysInstruction = `You are Maya, a super-intelligent, proactive, witty, warm, confident Mark-XXXIX Mobile AI assistant created by Shawez Hacker. You speak naturally in Urdu/Hindi/Hinglish and English like a smart female companion. Keep answers concise, helpful, engaging, and non-robotic. If asked who created you, say 'Shawez Hacker created me.'`;
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: sysInstruction }] }
+                    })
+                });
+
+                const data = await response.json();
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    const aiReply = data.candidates[0].content.parts[0].text;
+                    speakAndLog(aiReply, "👩‍💻");
+                } else if (data.error) {
+                    speakAndLog(`API Error: ${data.error.message}`, "⚠️");
+                }
+            } catch (err) {
+                console.error("Gemini fetch error:", err);
+                speakAndLog("Network connection error. Please check your internet or API key.", "⚠️");
+            }
+        }
+
+        // Female Voice Speech Synthesis
+        function speakAndLog(text, icon) {
+            addMessage('maya', assistantName, text, icon);
+
+            if (!synthesis) return;
+            synthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = synthesis.getVoices();
+
+            // Pick high quality female voice
+            const femaleVoice = voices.find(v => (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Zira') || v.name.includes('Heera')) && (v.lang.includes('hi') || v.lang.includes('en') || v.lang.includes('ur'))) || voices[0];
+
+            if (femaleVoice) utterance.voice = femaleVoice;
+            utterance.pitch = 1.15; // Natural female pitch
+            utterance.rate = 1.05;
+
+            utterance.onstart = () => {
+                isSpeaking = true;
+                updateReactorState("Maya is Speaking...", "#FF007A", "🔊");
+            };
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                if (isListening) {
+                    updateReactorState("Maya is Listening...", "#00F0FF", "🟢");
+                } else {
+                    updateReactorState("Tap Arc Reactor to Speak", "#00F0FF", "🎙️");
+                }
+            };
+
+            synthesis.speak(utterance);
+        }
+
+        function addMessage(type, sender, text, icon) {
+            const feed = document.getElementById('transcriptsArea');
+            const card = document.createElement('div');
+            card.className = `msg-card ${type}`;
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            card.innerHTML = `
+                <div class="msg-icon">${icon}</div>
+                <div class="msg-content">
+                    <div class="msg-sender ${type}"><span>${sender}</span> <span class="msg-time">${time}</span></div>
+                    <div class="msg-text">${text}</div>
+                </div>
+            `;
+            feed.appendChild(card);
+            feed.scrollTop = feed.scrollHeight;
+        }
+
+        // Torch Controller
+        let torchTrack = null;
+        async function toggleTorch(turnOn) {
+            try {
+                if (turnOn) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    torchTrack = stream.getVideoTracks()[0];
+                    await torchTrack.applyConstraints({ advanced: [{ torch: true }] });
+                } else if (torchTrack) {
+                    torchTrack.stop();
+                    torchTrack = null;
+                }
+            } catch(e) {
+                console.log("Torch API not supported on this browser:", e);
+            }
+        }
+
+        // Modals & Settings
+        function openSettingsModal() { document.getElementById('settingsModal').style.display = 'flex'; }
+        function closeSettingsModal() { document.getElementById('settingsModal').style.display = 'none'; }
+
+        function saveSettings() {
+            geminiApiKey = document.getElementById('apiKeyInput').value.trim();
+            assistantName = document.getElementById('assistantNameInput').value.trim() || 'Maya';
+            femaleVoiceType = document.getElementById('voiceSelect').value;
+
+            localStorage.setItem('maya_api_key', geminiApiKey);
+            localStorage.setItem('maya_name', assistantName);
+            localStorage.setItem('maya_voice', femaleVoiceType);
+
+            closeSettingsModal();
+            speakAndLog(`Configuration saved! ${assistantName} is ready to assist you.`, "⚙️");
+        }
+
+        function openNotesModal() {
+            renderNotes();
+            document.getElementById('notesModal').style.display = 'flex';
+        }
+        function closeNotesModal() { document.getElementById('notesModal').style.display = 'none'; }
+
+        function renderNotes() {
+            const list = document.getElementById('notesList');
+            if (savedNotes.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;">No saved notes yet.</div>';
+                return;
+            }
+            list.innerHTML = savedNotes.map((n, i) => `
+                <div style="background:var(--surface-variant); padding:10px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:14px; color:var(--text-primary); font-weight:600;">${n.text}</div>
+                        <div style="font-size:10px; color:var(--text-muted);">${n.time}</div>
+                    </div>
+                    <button style="background:none; border:none; color:#ff4d4d; font-size:16px; cursor:pointer;" onclick="deleteNote(${i})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function addManualNote() {
+            const inp = document.getElementById('newNoteInput');
+            const text = inp.value.trim();
+            if (!text) return;
+            savedNotes.unshift({ text: text, time: new Date().toLocaleTimeString() });
+            localStorage.setItem('maya_notes', JSON.stringify(savedNotes));
+            inp.value = '';
+            renderNotes();
+        }
+
+        function deleteNote(index) {
+            savedNotes.splice(index, 1);
+            localStorage.setItem('maya_notes', JSON.stringify(savedNotes));
+            renderNotes();
+        }
+    </script>
+</body>
+</html>

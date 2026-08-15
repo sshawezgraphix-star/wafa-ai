@@ -4,10 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,27 +14,31 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -54,25 +57,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.audio.AudioStreamer
+import com.example.data.AppSettingsManager
 import com.example.model.AssistantState
 import com.example.service.LiveSessionManager
 import com.example.ui.components.AnimatedWaveformView
 import com.example.ui.components.CentralGlowingMicButton
 import com.example.ui.components.LiveTranscriptPanel
 import com.example.ui.components.MicPermissionBanner
+import com.example.ui.components.NotesBottomSheet
+import com.example.ui.components.QuickActionChips
+import com.example.ui.components.SettingsBottomSheet
 import com.example.ui.theme.CyberBackground
 import com.example.ui.theme.CyberSurface
+import com.example.ui.theme.CyberSurfaceVariant
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.NeonPink
 import com.example.ui.theme.NeonPurple
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import com.example.BuildConfig
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FirdousMainScreen() {
     val context = LocalContext.current
+
+    val settingsManager = remember { AppSettingsManager(context) }
+    val assistantName by settingsManager.assistantNameFlow.collectAsState()
+    val selectedVoice by settingsManager.voiceFlow.collectAsState()
+    val apiKey by settingsManager.apiKeyFlow.collectAsState()
+
+    var showSettingsSheet by remember { mutableStateOf(false) }
+    var showNotesSheet by remember { mutableStateOf(false) }
+
+    val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val notesSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var hasMicPermission by remember {
         mutableStateOf(
@@ -83,10 +102,10 @@ fun FirdousMainScreen() {
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasMicPermission = isGranted
+    val multiplePermissionsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasMicPermission = permissions[Manifest.permission.RECORD_AUDIO] ?: hasMicPermission
     }
 
     val audioStreamer = remember { AudioStreamer(context) }
@@ -94,7 +113,7 @@ fun FirdousMainScreen() {
         LiveSessionManager(
             context = context,
             audioStreamer = audioStreamer,
-            apiKey = BuildConfig.GEMINI_API_KEY
+            settingsManager = settingsManager
         )
     }
 
@@ -114,6 +133,8 @@ fun FirdousMainScreen() {
 
     val currentAmplitude = if (state == AssistantState.SPEAKING) speakerAmplitude else micAmplitude
 
+    var textInput by remember { mutableStateOf("") }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = CyberBackground
@@ -124,100 +145,271 @@ fun FirdousMainScreen() {
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF0F1224),
+                            Color(0xFF0C0F1D),
                             CyberBackground,
-                            Color(0xFF080912)
+                            Color(0xFF06070E)
                         )
                     )
                 )
                 .statusBarsPadding()
                 .navigationBarsPadding()
+                .imePadding()
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header Bar
-                TopHeaderBar(
+                // 1. Top HUD Header Bar
+                TopHudHeaderBar(
                     state = state,
-                    toolCount = toolCalls.size
+                    assistantName = assistantName,
+                    voiceName = selectedVoice,
+                    toolCount = toolCalls.size,
+                    onOpenSettings = { showSettingsSheet = true },
+                    onOpenNotes = { showNotesSheet = true }
                 )
 
-                // Error / Secret Banner
+                // 2. Error / Missing API Key Notification Card
                 if (errorMessage != null) {
-                    ErrorNotificationCard(errorMessage!!)
+                    ErrorNotificationCard(
+                        message = errorMessage!!,
+                        onOpenSettings = { showSettingsSheet = true }
+                    )
                 }
 
-                // Permission Banner if required
+                // 3. Permission Banner
                 if (!hasMicPermission) {
                     MicPermissionBanner(
                         onRequestPermission = {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            multiplePermissionsLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.RECORD_AUDIO,
+                                    Manifest.permission.CAMERA,
+                                    Manifest.permission.CALL_PHONE
+                                )
+                            )
                         }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Central Assistant Status Label
+                // 4. Mark-XXXIX Title Branding
                 Text(
-                    text = "FIRDOUS AI",
+                    text = "$assistantName AI • MARK-XXXIX",
                     color = NeonCyan,
-                    fontSize = 24.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 3.sp
+                    letterSpacing = 2.5.sp
                 )
-
                 Text(
                     text = "Created by Shawez Hacker",
                     color = NeonPurple,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.sp
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Central Glowing Mic Button
+                // 5. Central Glowing Arc Reactor Core
                 CentralGlowingMicButton(
                     state = state,
                     amplitude = currentAmplitude,
                     onClick = {
-                        if (hasMicPermission) {
+                        if (apiKey.isBlank()) {
+                            showSettingsSheet = true
+                        } else if (hasMicPermission) {
                             sessionManager.toggleSession()
                         } else {
-                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            multiplePermissionsLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.RECORD_AUDIO,
+                                    Manifest.permission.CAMERA,
+                                    Manifest.permission.CALL_PHONE
+                                )
+                            )
                         }
                     }
                 )
 
+                // Status Label
                 Text(
                     text = state.label,
                     color = when (state) {
                         AssistantState.LISTENING -> NeonCyan
                         AssistantState.SPEAKING -> NeonPink
                         AssistantState.CONNECTING -> Color(0xFFFFB800)
+                        AssistantState.THINKING -> NeonPurple
                         else -> TextSecondary
                     },
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 4.dp)
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Real-Time Animated Waveform
+                // 6. Real-Time Dynamic Waveform
                 AnimatedWaveformView(
                     state = state,
                     amplitude = currentAmplitude
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // 7. Quick Action Chips Row
+                QuickActionChips(
+                    onActionClick = { prompt ->
+                        sessionManager.sendTextMessage(prompt)
+                    }
+                )
 
-                // Live Transcripts and Function Tool Logs
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // 8. Live Transcript & Tool Execution Panel
                 LiveTranscriptPanel(
                     messages = messages,
+                    assistantName = assistantName,
                     modifier = Modifier.weight(1f)
+                )
+
+                // 9. Bottom Text Input Bar (Fallback)
+                BottomChatInputBar(
+                    textValue = textInput,
+                    onTextChange = { textInput = it },
+                    onSend = {
+                        if (textInput.isNotBlank()) {
+                            sessionManager.sendTextMessage(textInput)
+                            textInput = ""
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    // Settings Bottom Sheet
+    if (showSettingsSheet) {
+        SettingsBottomSheet(
+            settingsManager = settingsManager,
+            sheetState = settingsSheetState,
+            onRequestAllPermissions = {
+                multiplePermissionsLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.RECORD_AUDIO,
+                        Manifest.permission.CAMERA,
+                        Manifest.permission.CALL_PHONE
+                    )
+                )
+            },
+            onDismiss = { showSettingsSheet = false }
+        )
+    }
+
+    // Notes Bottom Sheet
+    if (showNotesSheet) {
+        NotesBottomSheet(
+            settingsManager = settingsManager,
+            sheetState = notesSheetState,
+            onDismiss = { showNotesSheet = false }
+        )
+    }
+}
+
+@Composable
+fun TopHudHeaderBar(
+    state: AssistantState,
+    assistantName: String,
+    voiceName: String,
+    toolCount: Int,
+    onOpenSettings: () -> Unit,
+    onOpenNotes: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Status & Voice Pill
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(CyberSurface)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        color = when (state) {
+                            AssistantState.LISTENING -> Color(0xFF00FF66)
+                            AssistantState.SPEAKING -> NeonPink
+                            AssistantState.CONNECTING -> Color(0xFFFFB800)
+                            AssistantState.THINKING -> NeonPurple
+                            else -> TextMuted
+                        }
+                    )
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "$voiceName (Female Voice)",
+                color = TextSecondary,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace
+            )
+        }
+
+        // Action Icons (Notes, Tool count, Settings)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (toolCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1E2845))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "$toolCount Actions",
+                        color = NeonCyan,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
+            IconButton(
+                onClick = onOpenNotes,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(CyberSurface)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Description,
+                    contentDescription = "Saved Notes",
+                    tint = NeonPurple,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(CyberSurface)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Settings",
+                    tint = NeonCyan,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -225,79 +417,75 @@ fun FirdousMainScreen() {
 }
 
 @Composable
-fun TopHeaderBar(
-    state: AssistantState,
-    toolCount: Int
+fun BottomChatInputBar(
+    textValue: String,
+    onTextChange: (String) -> Unit,
+    onSend: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .background(
-                        color = when (state) {
-                            AssistantState.LISTENING -> Color(0xFF00FF66)
-                            AssistantState.SPEAKING -> NeonPink
-                            AssistantState.CONNECTING -> Color(0xFFFFB800)
-                            else -> TextMuted
-                        },
-                        shape = RoundedCornerShape(5.dp)
-                    )
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Voice-to-Voice PCM16",
-                color = TextSecondary,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace
-            )
-        }
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = onTextChange,
+            modifier = Modifier.weight(1f),
+            placeholder = {
+                Text(
+                    text = "Type a command or research topic...",
+                    color = TextMuted,
+                    fontSize = 13.sp
+                )
+            },
+            shape = RoundedCornerShape(24.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = NeonCyan,
+                unfocusedBorderColor = Color(0xFF242A42),
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+                focusedContainerColor = CyberSurfaceVariant,
+                unfocusedContainerColor = CyberSurfaceVariant
+            ),
+            singleLine = true
+        )
 
-        if (toolCount > 0) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CyberSurface),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Tools Executed",
-                        tint = NeonCyan,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "$toolCount Browser Tools",
-                        color = TextPrimary,
-                        fontSize = 11.sp
-                    )
-                }
-            }
+        Spacer(modifier = Modifier.width(8.dp))
+
+        IconButton(
+            onClick = onSend,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(if (textValue.isNotBlank()) NeonCyan else Color(0xFF22283E))
+        ) {
+            Icon(
+                imageVector = Icons.Default.Send,
+                contentDescription = "Send Command",
+                tint = if (textValue.isNotBlank()) Color.Black else TextMuted,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
 
 @Composable
-fun ErrorNotificationCard(message: String) {
+fun ErrorNotificationCard(
+    message: String,
+    onOpenSettings: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable(onClick = onOpenSettings)
             .testTag("error_card"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF331418)),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -307,10 +495,19 @@ fun ErrorNotificationCard(message: String) {
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = message,
+                    color = Color(0xFFFFD6D6),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
             Text(
-                text = message,
-                color = Color(0xFFFFD6D6),
-                fontSize = 13.sp
+                text = "SETTINGS ⚙️",
+                color = NeonCyan,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }

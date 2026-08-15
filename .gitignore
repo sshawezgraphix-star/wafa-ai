@@ -16,3 +16,10 @@
 local.properties
 .env
 debug.keystore
+
+# Local tool caches
+gradle-dist/
+platform-tools/
+*.zip
+*.log
+*.tmp

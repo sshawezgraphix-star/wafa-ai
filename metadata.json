@@ -1,6 +1,6 @@
 {
-  "name": "Firdous AI Assistant",
-  "description": "Real-time voice AI assistant Firdous created by Shawez Hacker with audio visualizers, tool integration, and natural conversation.",
+  "name": "Maya AI Mobile Assistant (Mark-XXXIX)",
+  "description": "Real-time female voice AI assistant Maya created by Shawez Hacker with Gemini Live native audio, deep web research, phone calling, WhatsApp automation, flashlight, battery, volume, alarms, and holographic HUD.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
