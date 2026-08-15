@@ -135,7 +135,7 @@ class LiveSessionManager(
             val selectedVoice = settingsManager.getSelectedVoice()
             val setupObj = JSONObject().apply {
                 put("setup", JSONObject().apply {
-                    put("model", "models/gemini-2.5-flash-native-audio-preview-12-2025")
+                    put("model", "models/gemini-2.0-flash-exp")
                     put("generationConfig", JSONObject().apply {
                         put("responseModalities", JSONArray().apply { put("AUDIO") })
                         put("speechConfig", JSONObject().apply {
