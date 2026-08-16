@@ -27,20 +27,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +53,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +73,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.AppSettingsManager
 import com.example.data.AssistantVoice
+import com.example.service.AppUpdateManager
+import com.example.service.UpdateStatus
 import com.example.ui.theme.CyberSurface
 import com.example.ui.theme.CyberSurfaceVariant
 import com.example.ui.theme.NeonCyan
@@ -80,6 +88,7 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun SettingsBottomSheet(
     settingsManager: AppSettingsManager,
+    updateManager: AppUpdateManager? = null,
     sheetState: SheetState,
     onRequestAllPermissions: () -> Unit = {},
     onDismiss: () -> Unit
@@ -300,7 +309,23 @@ fun SettingsBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 5. In-App Updates & OTA Features
+            if (updateManager != null) {
+                Text(
+                    text = "APP VERSION & IN-APP UPDATER",
+                    color = Color(0xFFFFB800),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                AppUpdateCard(updateManager = updateManager)
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             if (saveStatus != null) {
                 Text(
@@ -332,6 +357,158 @@ fun SettingsBottomSheet(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 1.sp
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun AppUpdateCard(updateManager: AppUpdateManager) {
+    val context = LocalContext.current
+    val updateStatus by updateManager.updateStatus.collectAsState()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CyberSurfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = "Update",
+                        tint = Color(0xFFFFB800),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Installed: ${updateManager.currentVersion}",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (updateStatus !is UpdateStatus.Checking && updateStatus !is UpdateStatus.Downloading) {
+                    IconButton(
+                        onClick = { updateManager.checkForUpdates() },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Check",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            when (val status = updateStatus) {
+                is UpdateStatus.Idle -> {
+                    Button(
+                        onClick = { updateManager.checkForUpdates() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A314A)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Check for New Features & Updates", color = NeonCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                is UpdateStatus.Checking -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color(0xFFFFB800),
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Checking GitHub Cloud Releases...",
+                            color = Color(0xFFFFB800),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                is UpdateStatus.UpdateAvailable -> {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "🚀 New Update Found: ${status.versionTag}",
+                            color = Color(0xFF00FF66),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = status.releaseName,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Button(
+                            onClick = { updateManager.downloadAndInstall(status.downloadUrl) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FF66)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("1-Click Download & Update", color = Color.Black, fontSize = 12.5.sp, fontWeight = FontWeight.ExtraBold)
+                        }
+                    }
+                }
+
+                is UpdateStatus.Downloading -> {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Downloading Update: ${(status.progress * 100).toInt()}%",
+                            color = NeonCyan,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { status.progress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                            color = NeonCyan,
+                            trackColor = Color(0xFF22283E)
+                        )
+                    }
+                }
+
+                is UpdateStatus.UpToDate -> {
+                    Text(
+                        text = "✅ Maya AI is up to date with the latest features!",
+                        color = Color(0xFF00FF66),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                is UpdateStatus.Error -> {
+                    Text(
+                        text = "⚠️ ${status.message}",
+                        color = Color(0xFFFF4D4D),
+                        fontSize = 11.5.sp
+                    )
+                }
             }
         }
     }
@@ -379,25 +556,27 @@ fun VoiceSelectionCard(
             ),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFF16213B) else CyberSurfaceVariant
+            containerColor = if (isSelected) Color(0xFF132034) else CyberSurfaceVariant
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) NeonCyan.copy(alpha = 0.2f) else Color(0xFF101422)),
+                    .background(if (isSelected) NeonCyan else Color(0xFF242A42)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.RecordVoiceOver,
-                    contentDescription = voice.name,
-                    tint = if (isSelected) NeonCyan else TextMuted,
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = null,
+                    tint = if (isSelected) Color.Black else TextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
@@ -406,32 +585,26 @@ fun VoiceSelectionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = voice.name,
+                        text = voice.displayName,
                         color = if (isSelected) NeonCyan else TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "(${voice.gender})",
-                        color = NeonPink,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    if (isSelected) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Selected",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
                 Text(
-                    text = voice.description,
+                    text = "${voice.tone} • ${voice.description}",
                     color = TextSecondary,
-                    fontSize = 11.sp
-                )
-            }
-
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = NeonCyan,
-                    modifier = Modifier.size(20.dp)
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
                 )
             }
         }

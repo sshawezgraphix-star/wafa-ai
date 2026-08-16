@@ -59,6 +59,7 @@ import androidx.core.content.ContextCompat
 import com.example.audio.AudioStreamer
 import com.example.data.AppSettingsManager
 import com.example.model.AssistantState
+import com.example.service.AppUpdateManager
 import com.example.service.LiveSessionManager
 import com.example.ui.components.AnimatedWaveformView
 import com.example.ui.components.CentralGlowingMicButton
@@ -83,6 +84,7 @@ fun FirdousMainScreen() {
     val context = LocalContext.current
 
     val settingsManager = remember { AppSettingsManager(context) }
+    val updateManager = remember { AppUpdateManager(context) }
     val assistantName by settingsManager.assistantNameFlow.collectAsState()
     val selectedVoice by settingsManager.voiceFlow.collectAsState()
     val apiKey by settingsManager.apiKeyFlow.collectAsState()
@@ -291,6 +293,7 @@ fun FirdousMainScreen() {
     if (showSettingsSheet) {
         SettingsBottomSheet(
             settingsManager = settingsManager,
+            updateManager = updateManager,
             sheetState = settingsSheetState,
             onRequestAllPermissions = {
                 multiplePermissionsLauncher.launch(

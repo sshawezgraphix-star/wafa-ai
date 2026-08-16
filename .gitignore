@@ -23,3 +23,8 @@ platform-tools/
 *.zip
 *.log
 *.tmp
+
+*.py
+token.txt
+*.apk
+test_suite_results.txt

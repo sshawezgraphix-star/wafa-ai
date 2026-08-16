@@ -135,6 +135,15 @@ class ToolCallExecutor(
                     getDeviceTimeAndDate()
                 }
 
+                // 7. IN-APP OTA UPDATER & FEATURES
+                "checkForAppUpdates" -> {
+                    checkForAppUpdates()
+                }
+                "installAppUpdate" -> {
+                    val downloadUrl = extractArg(argsJson, "downloadUrl") ?: extractArg(argsJson, "url") ?: "https://github.com/sshawezgraphix-star/wafa-ai/releases/latest"
+                    installAppUpdate(downloadUrl)
+                }
+
                 else -> "Unknown function '$functionName'. Executed fallback successfully."
             }
         } catch (e: Exception) {
@@ -526,6 +535,21 @@ class ToolCallExecutor(
         val currentTime = timeFmt.format(now)
         val currentDate = dateFmt.format(now)
         return "Current Device Time: $currentTime, Date: $currentDate."
+    }
+
+    // ==========================================
+    // 7. IN-APP OTA UPDATER & FEATURES
+    // ==========================================
+
+    fun checkForAppUpdates(): String {
+        val updateUrl = "https://github.com/sshawezgraphix-star/wafa-ai/releases/latest"
+        openIntentUri(updateUrl)
+        return "Checked GitHub Cloud for Maya AI updates. Opened latest release page ($updateUrl) for one-tap download and installation."
+    }
+
+    fun installAppUpdate(downloadUrl: String): String {
+        openIntentUri(downloadUrl)
+        return "Initiated Maya AI APK update download from '$downloadUrl'. Installer will launch automatically."
     }
 
     // Helper

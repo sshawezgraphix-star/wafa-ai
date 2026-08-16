@@ -208,6 +208,10 @@ class LiveSessionManager(
         arr.put(createToolDecl("takeNote", "Saves a quick note into device memory", listOf("content" to "Note text to remember")))
         arr.put(createToolDecl("getDeviceTimeAndDate", "Returns the current device time, date, and day", emptyList()))
 
+        // 7. OTA Updates & New Features
+        arr.put(createToolDecl("checkForAppUpdates", "Checks GitHub for newly released Maya AI features, improvements, and updates", emptyList()))
+        arr.put(createToolDecl("installAppUpdate", "Downloads and triggers installation for the latest Maya AI APK build", listOf("downloadUrl" to "Direct APK release URL")))
+
         return arr
     }
 
