@@ -193,14 +193,23 @@ class ToolCallExecutor(
     // ==========================================
 
     fun makePhoneCall(phoneNumber: String, contactName: String?): String {
-        val cleanNumber = phoneNumber.replace("[^0-9+]".toRegex(), "")
-        return if (cleanNumber.isNotBlank()) {
-            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$cleanNumber")).apply {
+        var targetNumber = phoneNumber.replace("[^0-9+]".toRegex(), "")
+        var matchedName = contactName
+
+        if (targetNumber.isBlank() && !contactName.isNullOrBlank()) {
+            val found = searchContactNumber(contactName)
+            if (!found.isNullOrBlank()) {
+                targetNumber = found.replace("[^0-9+]".toRegex(), "")
+            }
+        }
+
+        return if (targetNumber.isNotBlank()) {
+            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$targetNumber")).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(intent)
-            val nameDisplay = if (!contactName.isNullOrBlank()) " ($contactName)" else ""
-            "Calling $cleanNumber$nameDisplay. Phone dialer opened."
+            val nameDisplay = if (!matchedName.isNullOrBlank()) " ($matchedName)" else ""
+            "Calling $targetNumber$nameDisplay. Phone dialer opened."
         } else {
             // Open blank dialer
             val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -211,8 +220,38 @@ class ToolCallExecutor(
         }
     }
 
+    fun searchContactNumber(contactName: String): String? {
+        return try {
+            val cursor = context.contentResolver.query(
+                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(
+                    android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER,
+                    android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                ),
+                "${android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+                arrayOf("%$contactName%"),
+                null
+            )
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    it.getString(it.getColumnIndexOrThrow(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER))
+                } else null
+            }
+        } catch (e: Exception) {
+            Log.e("ToolCallExecutor", "Error searching contact", e)
+            null
+        }
+    }
+
     fun sendWhatsAppMessage(phoneNumber: String, message: String): String {
-        val cleanNumber = phoneNumber.replace("[^0-9]".toRegex(), "")
+        var cleanNumber = phoneNumber.replace("[^0-9]".toRegex(), "")
+        if (cleanNumber.isBlank()) {
+            // Check if phoneNumber parameter actually contained a contact name
+            val found = searchContactNumber(phoneNumber)
+            if (!found.isNullOrBlank()) {
+                cleanNumber = found.replace("[^0-9]".toRegex(), "")
+            }
+        }
         return try {
             val uri = if (cleanNumber.isNotBlank()) {
                 Uri.parse("https://api.whatsapp.com/send?phone=$cleanNumber&text=${Uri.encode(message)}")
