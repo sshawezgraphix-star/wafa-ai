@@ -219,11 +219,7 @@ fun FirdousMainScreen() {
                     state = state,
                     amplitude = currentAmplitude,
                     onClick = {
-                        if (apiKey.isBlank()) {
-                            showSettingsSheet = true
-                        } else if (hasMicPermission) {
-                            sessionManager.toggleSession()
-                        } else {
+                        if (!hasMicPermission) {
                             multiplePermissionsLauncher.launch(
                                 arrayOf(
                                     Manifest.permission.RECORD_AUDIO,
@@ -232,6 +228,7 @@ fun FirdousMainScreen() {
                                 )
                             )
                         }
+                        sessionManager.toggleSession()
                     }
                 )
 

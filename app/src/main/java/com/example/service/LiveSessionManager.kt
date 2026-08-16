@@ -108,6 +108,13 @@ class LiveSessionManager(
 
                 isTtsReady = true
                 Log.d("IrisAI", "TTS Initialized successfully.")
+
+                // Startup Voice Greeting
+                mainHandler.postDelayed({
+                    val greeting = "Maya AI Mark-XXXIX online, Shawez Sir! Aadesh kijiye."
+                    addAiMessage(greeting)
+                    speak(greeting)
+                }, 800)
             }
         } else {
             Log.e("IrisAI", "TTS initialization failed with code $status")
