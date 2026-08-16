@@ -406,14 +406,14 @@ class LiveSessionManager(
 
         // 1. Torch / Flashlight
         if (lower.contains("torch on") || lower.contains("flashlight on") || lower.contains("torch chalu")) {
-            val res = toolExecutor.toggleFlashlight("true")
+            val res = toolExecutor.toggleFlashlight(true)
             val reply = "Flashlight on kar di hai, Sir! 🔦"
             addAiMessage(reply)
             speak(reply)
             return true
         }
         if (lower.contains("torch off") || lower.contains("flashlight off") || lower.contains("torch band")) {
-            val res = toolExecutor.toggleFlashlight("false")
+            val res = toolExecutor.toggleFlashlight(false)
             val reply = "Flashlight band kar di hai, Sir. 🔦"
             addAiMessage(reply)
             speak(reply)
