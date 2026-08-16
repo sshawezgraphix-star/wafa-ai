@@ -585,7 +585,7 @@ fun VoiceSelectionCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = voice.displayName,
+                        text = voice.name,
                         color = if (isSelected) NeonCyan else TextPrimary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
@@ -601,7 +601,7 @@ fun VoiceSelectionCard(
                     }
                 }
                 Text(
-                    text = "${voice.tone} • ${voice.description}",
+                    text = "${voice.gender} • ${voice.description}",
                     color = TextSecondary,
                     fontSize = 11.sp,
                     lineHeight = 14.sp
