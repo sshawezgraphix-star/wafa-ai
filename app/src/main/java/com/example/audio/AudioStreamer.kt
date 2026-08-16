@@ -154,6 +154,10 @@ class AudioStreamer(private val context: Context) {
         _outputAmplitude.value = 0f
     }
 
+    fun setAmplitude(amp: Float) {
+        _amplitude.value = amp.coerceIn(0f, 1f)
+    }
+
     fun release() {
         stopRecording()
         stopPlayback()
