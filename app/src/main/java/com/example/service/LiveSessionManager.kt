@@ -11,6 +11,7 @@ import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import android.widget.Toast
 import com.example.audio.AudioStreamer
 import com.example.data.AppSettingsManager
 import com.example.model.AssistantState
@@ -18,6 +19,8 @@ import com.example.model.ToolCallInfo
 import com.example.model.VoiceMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +33,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 
 class LiveSessionManager(
@@ -66,6 +70,8 @@ class LiveSessionManager(
     // Native Text to Speech (Female Voice TTS)
     private var tts: TextToSpeech? = null
     private var isTtsReady = false
+    private val pendingSpeechQueue = ConcurrentLinkedQueue<String>()
+    private var waveformAnimationJob: Job? = null
 
     init {
         mainHandler.post {
@@ -80,45 +86,73 @@ class LiveSessionManager(
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts?.let { engine ->
-                // Try Indian English or Hindi or Default
                 var result = engine.setLanguage(Locale("hi", "IN"))
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     result = engine.setLanguage(Locale.ENGLISH)
                 }
 
-                // Modern, crisp, confident female tone
+                // Crisp, confident, melodic female tone
                 engine.setPitch(1.18f)
                 engine.setSpeechRate(1.05f)
 
                 engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {
                         _state.value = AssistantState.SPEAKING
+                        startWaveformPulse()
                     }
 
                     override fun onDone(utteranceId: String?) {
+                        stopWaveformPulse()
                         _state.value = AssistantState.IDLE
-                        audioStreamer.setAmplitude(0f)
                     }
 
                     override fun onError(utteranceId: String?) {
+                        stopWaveformPulse()
                         _state.value = AssistantState.IDLE
-                        audioStreamer.setAmplitude(0f)
                     }
                 })
 
                 isTtsReady = true
                 Log.d("IrisAI", "TTS Initialized successfully.")
 
+                // Drain any pending speech
+                while (!pendingSpeechQueue.isEmpty()) {
+                    val pending = pendingSpeechQueue.poll()
+                    if (!pending.isNullOrBlank()) {
+                        speak(pending)
+                    }
+                }
+
                 // Startup Voice Greeting
                 mainHandler.postDelayed({
                     val greeting = "Maya AI Mark-XXXIX online, Shawez Sir! Aadesh kijiye."
                     addAiMessage(greeting)
                     speak(greeting)
-                }, 800)
+                }, 600)
             }
         } else {
             Log.e("IrisAI", "TTS initialization failed with code $status")
         }
+    }
+
+    private fun startWaveformPulse() {
+        waveformAnimationJob?.cancel()
+        waveformAnimationJob = scope.launch {
+            val pattern = floatArrayOf(0.3f, 0.7f, 0.9f, 0.6f, 0.8f, 0.4f, 1.0f, 0.5f)
+            var idx = 0
+            while (_state.value == AssistantState.SPEAKING) {
+                audioStreamer.setAmplitude(pattern[idx % pattern.size])
+                idx++
+                delay(120)
+            }
+            audioStreamer.setAmplitude(0f)
+        }
+    }
+
+    private fun stopWaveformPulse() {
+        waveformAnimationJob?.cancel()
+        waveformAnimationJob = null
+        audioStreamer.setAmplitude(0f)
     }
 
     fun toggleSession() {
@@ -238,12 +272,18 @@ class LiveSessionManager(
         if (text.isBlank()) return
         stopSpeaking()
 
+        if (!isTtsReady || tts == null) {
+            pendingSpeechQueue.add(text)
+            return
+        }
+
         mainHandler.post {
             try {
-                if (isTtsReady && tts != null) {
-                    _state.value = AssistantState.SPEAKING
-                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "iris_utterance_${System.currentTimeMillis()}")
+                _state.value = AssistantState.SPEAKING
+                val params = Bundle().apply {
+                    putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
                 }
+                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "iris_utterance_${System.currentTimeMillis()}")
             } catch (e: Exception) {
                 Log.e("IrisAI", "Error speaking TTS", e)
                 _state.value = AssistantState.IDLE
@@ -252,6 +292,7 @@ class LiveSessionManager(
     }
 
     fun stopSpeaking() {
+        stopWaveformPulse()
         mainHandler.post {
             try {
                 tts?.stop()
@@ -281,7 +322,7 @@ class LiveSessionManager(
 
             val apiKey = settingsManager.getApiKey()
             if (apiKey.isBlank()) {
-                val fallbackReply = "Shawez Hacker created me, Sir. Phone controls ready hain, par complete Gemini intelligence ke liye Settings (⚙️) mein API key save karein."
+                val fallbackReply = "Shawez Hacker created me, Sir. Phone controls ready hain! Complete AI intelligence ke liye Settings (⚙️) mein API key save karein."
                 addAiMessage(fallbackReply)
                 speak(fallbackReply)
                 return@launch
@@ -297,10 +338,10 @@ class LiveSessionManager(
 
             val systemPrompt = """
                 You are ${settingsManager.getAssistantName()}, the intelligent, fast, and confident Mark-XXXIX Mobile Assistant.
-                You have full control over the user's phone hardware, apps, and tools.
+                You have direct control over the user's phone hardware, apps, and tools.
                 
-                CREATOR RULE:
-                If asked who created you or made you, you MUST state: "Shawez Hacker created me, Sir."
+                CREATOR IDENTITY RULE:
+                If asked who created you, who made you, or who your developer/boss is, you MUST proudly state: "Shawez Hacker created me, Sir."
                 
                 LANGUAGE & TONE:
                 - Fluent in Urdu, Hindi, Hinglish, and English.
@@ -339,9 +380,9 @@ class LiveSessionManager(
             val responseBody = response.body?.string() ?: ""
 
             if (!response.isSuccessful) {
-                val err = "Gemini API returned error ${response.code}"
+                val err = "Gemini API error ${response.code}"
                 _errorMessage.value = err
-                val speakErr = "Server se connect nahi ho saka. Offline tools activate kar diye hain."
+                val speakErr = "Server issue. Offline tools chalu hain, Sir."
                 addAiMessage(speakErr)
                 speak(speakErr)
                 return
@@ -436,19 +477,35 @@ class LiveSessionManager(
         }
 
         // 3. Creator Identity
-        if (lower.contains("who created you") || lower.contains("who made you") || lower.contains("tumhe kisne banaya") || lower.contains("owner")) {
+        if (lower.contains("who created you") || lower.contains("who made you") || lower.contains("tumhe kisne banaya") || lower.contains("owner") || lower.contains("developer")) {
             val reply = "Shawez Hacker created me, Sir. Main aapka Mark-XXXIX Mobile AI Assistant hoon."
             addAiMessage(reply)
             speak(reply)
             return true
         }
 
-        // 4. Update Check
+        // 4. Greetings / Casual
+        if (lower == "kya haal hai" || lower.contains("kaise ho") || lower.contains("how are you")) {
+            val reply = "Main bilkul teek hoon Shawez Sir! Aap batayein aaj phone par kya command execute karna hai?"
+            addAiMessage(reply)
+            speak(reply)
+            return true
+        }
+
+        // 5. Update Check
         if (lower.contains("update") || lower.contains("check for update")) {
             val res = toolExecutor.checkForAppUpdates()
             val reply = "GitHub Cloud se latest updates check kar rahi hoon, Sir."
             addAiMessage(reply)
             speak(reply)
+            return true
+        }
+
+        // 6. Time & Date
+        if (lower.contains("time") || lower.contains("date") || lower.contains("kitne baje")) {
+            val res = toolExecutor.getDeviceTimeAndDate()
+            addAiMessage(res)
+            speak(res)
             return true
         }
 
